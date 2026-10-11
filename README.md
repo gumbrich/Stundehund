@@ -5,10 +5,10 @@ work, switch projects, and export the day. German (Swiss) interface.
 
 ## Download and run
 
-**Build status:** the source and local tests are complete, but no Windows binary
-has been published yet. GitHub refused the first Windows job before execution
-because the account's Actions budget prevents further use. After enabling the
-budget, rerun the workflow; alternatively use the Windows build script below.
+**Windows preview:** the native Windows release build, static analysis and all
+16 automated tests passed on GitHub's Windows runner. The desktop interface was
+also checked interactively on macOS. An interactive Windows 11 smoke test remains
+to be done.
 
 Download **Stundehund-Windows-x64.zip** from this private repository's
 [Releases](https://github.com/gumbrich/Stundehund/releases), extract the **whole folder**, and run `stundehund.exe`.
@@ -115,7 +115,7 @@ To produce the portable ZIP on a Windows build machine:
 
 The script checks formatting, analysis and tests, builds the release, bundles the
 Visual C++ runtime, and writes `Stundehund-Windows-x64.zip` to the repository root.
-The Windows script and pipeline await execution on a Windows host.
+The same script is used by the GitHub Windows build workflow.
 
 On macOS, use `flutter run -d macos`. The Windows workflow runs formatting,
 analysis, tests and a native release build; bundles Visual C++ runtime DLLs; and
