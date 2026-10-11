@@ -2,6 +2,11 @@
 
 A small, private Windows desktop timekeeper. Click a coloured project button,
 work, switch projects, and export the day. German (Swiss) interface.
+The top workday timer displays hours and minutes (`HH:MM`).
+
+The dog-in-profile and clock mark is shared by the app, Windows icon and macOS
+iconset. Regenerate it with `python3 tool/generate_icons.py` (requires Pillow);
+the editable vector is `docs/stundehund.svg`.
 
 ## Download and run
 
@@ -14,6 +19,10 @@ Download **Stundehund-Windows-x64.zip** from this private repository's
 [Releases](https://github.com/gumbrich/Stundehund/releases), extract the **whole folder**, and run `stundehund.exe`.
 Keep the DLLs and `data` folder beside the executable. No Flutter SDK or
 administrator installation is needed on the target computer.
+
+The same release also includes **Stundehund-macOS.zip** for trying the desktop
+app on a Mac. Extract it and open `Stundehund.app`. This development preview is
+not notarized for distribution.
 
 Target: **Windows 11, x64**. Builds are unsigned. Windows on ARM and managed
 company deployments have not been tested. A macOS target is included for local

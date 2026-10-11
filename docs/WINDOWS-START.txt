@@ -1,4 +1,4 @@
-STUNDEHUND 0.1.0 - Windows 11 (x64)
+STUNDEHUND 0.1.1 - Windows 11 (x64)
 
 1. Das gesamte ZIP in einen eigenen Ordner entpacken.
 2. stundehund.exe starten. DLLs und den Ordner data daneben belassen.

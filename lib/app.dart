@@ -633,7 +633,7 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      elapsed(total, seconds: true),
+                      elapsed(total),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -732,14 +732,11 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
 
   Widget brand(String status, bool running, bool paused) => Row(
     children: [
-      Container(
+      Image.asset(
+        'assets/stundehund.png',
         width: 40,
         height: 40,
-        decoration: BoxDecoration(
-          color: orange,
-          borderRadius: BorderRadius.circular(13),
-        ),
-        child: const Icon(Icons.pets_rounded, color: ink, size: 24),
+        excludeFromSemantics: true,
       ),
       const SizedBox(width: 12),
       Flexible(

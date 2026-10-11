@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <title>Stundehund: dog in profile with a clock</title>
+  <rect x="3" y="3" width="250" height="250" rx="55" fill="#f4bd83"/>
+  <path d="M 63 132 C 45 128 32 115 28 94" fill="none" stroke="#202c3c" stroke-width="15" stroke-linecap="round"/>
+  <path d="M 72 117 C 60 117 52 129 52 145 L 52 182 Q 52 194 65 194 L 84 194 L 84 182 L 75 182 L 75 164 L 149 164 L 149 182 Q 149 194 162 194 L 182 194 L 182 182 L 172 182 L 172 153 C 180 144 185 130 184 117 L 198 117 C 217 117 228 108 228 95 L 228 86 L 206 86 L 199 72 C 190 57 172 53 156 61 C 142 68 136 83 139 99 L 142 117 Z" fill="#202c3c"/>
+  <path d="M 164 70 C 157 79 155 95 163 106" fill="none" stroke="#f4bd83" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="193" cy="81" r="4" fill="#f4bd83"/>
+  <circle cx="110" cy="139" r="28" fill="#fff8eb"/>
+  <path d="M110 123 V139 L122 145" fill="none" stroke="#202c3c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
