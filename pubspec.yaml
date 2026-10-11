@@ -1,0 +1,21 @@
+name: stundehund
+description: Private desktop timekeeping with a floating project bar and CSV export.
+publish_to: none
+version: 0.1.0+1
+environment:
+  sdk: ^3.11.3
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  path_provider: ^2.1.5
+  file_selector: ^1.1.0
+  window_manager: 0.5.2
+  screen_retriever: 0.2.2
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+flutter:
+  uses-material-design: true

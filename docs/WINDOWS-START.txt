@@ -1,0 +1,33 @@
+STUNDEHUND 0.1.0 - Windows 11 (x64)
+
+1. Das gesamte ZIP in einen eigenen Ordner entpacken.
+2. stundehund.exe starten. DLLs und den Ordner data daneben belassen.
+3. Unter Projekte die eigenen Projekte, Farben und Abacus-Nummern eintragen.
+4. Start oder eine Projekt-Taste startet die Erfassung. Ein Projektwechsel
+   beendet automatisch den vorherigen Abschnitt. Pause / Weiter für Pausen.
+5. Über das Pfeil-Symbol rechts oben zur kleinen Leiste wechseln.
+   Diese bleibt oben am Bildschirm über anderen Fenstern sichtbar.
+6. Stop beendet die Erfassung. CSV exportieren zeigt eine Vorschau und
+   öffnet den Speichern-Dialog für den ausgewählten Tag.
+
+ABACUS
+Die CSV ist konfigurierbar. Eine direkte Kompatibilität mit eurer konkreten
+Abacus-Installation ist noch NICHT bestätigt. Exportprofil anhand der
+Importvorlage eurer Administration einstellen und einen Testimport machen.
+
+DATEN
+Alle Zeitdaten bleiben lokal. Kein Konto, keine Cloud, keine Telemetrie.
+Der genaue Datenordner steht unter Projekte. Regelmässig Sicherung verwenden.
+Bei Schliessen wird eine laufende Erfassung nach Rückfrage gestoppt.
+Nach einem Absturz endet sie am letzten Speicherpunkt (alle 30 Sekunden).
+Unterbrechungen über 90 Sekunden, z.B. Standby, stoppen die Erfassung.
+Letzte Endzeit prüfen, gegebenenfalls korrigieren, dann erneut starten.
+Eine Bildschirmsperre allein pausiert nicht automatisch.
+
+TASTATUR (wenn Stundehund fokussiert ist)
+Strg+1 bis Strg+9: Projekt entsprechend der Reihenfolge in der Leiste
+Strg+Leertaste: Start / Pause / Weiter
+Strg+Umschalt+S: Start / Stop
+
+Das Programm ist nicht digital signiert. Für den Einsatz auf einem
+Firmencomputer gelten die Installationsvorgaben eurer IT.
