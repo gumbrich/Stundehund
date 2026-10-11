@@ -5,6 +5,11 @@ work, switch projects, and export the day. German (Swiss) interface.
 
 ## Download and run
 
+**Build status:** the source and local tests are complete, but no Windows binary
+has been published yet. GitHub refused the first Windows job before execution
+because the account's Actions budget prevents further use. After enabling the
+budget, rerun the workflow; alternatively use the Windows build script below.
+
 Download **Stundehund-Windows-x64.zip** from this private repository's
 [Releases](https://github.com/gumbrich/Stundehund/releases), extract the **whole folder**, and run `stundehund.exe`.
 Keep the DLLs and `data` folder beside the executable. No Flutter SDK or
@@ -101,6 +106,16 @@ flutter test
 flutter run -d windows
 flutter build windows --release
 ```
+
+To produce the portable ZIP on a Windows build machine:
+
+```powershell
+.\tool\build_windows.ps1
+```
+
+The script checks formatting, analysis and tests, builds the release, bundles the
+Visual C++ runtime, and writes `Stundehund-Windows-x64.zip` to the repository root.
+The Windows script and pipeline await execution on a Windows host.
 
 On macOS, use `flutter run -d macos`. The Windows workflow runs formatting,
 analysis, tests and a native release build; bundles Visual C++ runtime DLLs; and

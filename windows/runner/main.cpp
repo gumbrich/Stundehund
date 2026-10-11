@@ -11,7 +11,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   HANDLE mutex = ::CreateMutexW(nullptr, TRUE, L"Local\\Stundehund.TimeStore");
   if (mutex == nullptr || ::GetLastError() == ERROR_ALREADY_EXISTS) {
     if (mutex != nullptr) ::CloseHandle(mutex);
-    ::MessageBoxW(nullptr, L"Stundehund ist bereits geöffnet.", L"Stundehund", MB_OK | MB_ICONINFORMATION);
+    ::MessageBoxW(nullptr, L"Stundehund ist bereits ge\u00f6ffnet.", L"Stundehund", MB_OK | MB_ICONINFORMATION);
     return EXIT_SUCCESS;
   }
   // Attach to console when present (e.g., 'flutter run') or create a
