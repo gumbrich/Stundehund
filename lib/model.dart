@@ -1,6 +1,16 @@
 import 'dart:math' as math;
 
 const otherId = 'other';
+const animalNames = {'dog': 'Hund', 'squirrel': 'Eichhörnchen', 'owl': 'Eule'};
+const activitySuggestions = [
+  'Projektkoordination',
+  'Controlling & Rechnungsstellung',
+  'Abstimmung intern',
+  'Abstimmung extern',
+  'Abstimmung mit Auftraggeberschaft',
+  'Sitzung inkl. Vor- und Nachbereitung',
+];
+
 const projectColors = [
   0xFF496CE8,
   0xFF2A9576,
@@ -102,7 +112,7 @@ const exportLabels = [
   'Von',
   'Bis',
   'Dauer',
-  'Bemerkung',
+  'F9-Text',
 ];
 
 class ExportColumn {
@@ -127,6 +137,7 @@ class ExportProfile {
     this.includeBreaks = false,
     this.header = true,
     this.bom = true,
+    this.rounding = 'nearest',
     this.columns = const [
       ExportColumn(ExportField.date, 'Datum'),
       ExportColumn(ExportField.employee, 'Personalnummer'),
@@ -134,9 +145,11 @@ class ExportProfile {
       ExportColumn(ExportField.projectName, 'Projekt'),
       ExportColumn(ExportField.activity, 'Leistungsart'),
       ExportColumn(ExportField.duration, 'Stunden'),
+      ExportColumn(ExportField.note, 'F9-Text'),
     ],
   });
-  final String employee, delimiter, dateFormat, durationFormat;
+  final String employee, delimiter, dateFormat, durationFormat, rounding;
+  bool get dailySummary => rounding != 'none' || summary;
   final bool decimalComma, summary, includeBreaks, header, bom;
   final List<ExportColumn> columns;
   Map<String, dynamic> toJson() => {
@@ -149,6 +162,7 @@ class ExportProfile {
     'includeBreaks': includeBreaks,
     'header': header,
     'bom': bom,
+    'rounding': rounding,
     'columns': columns.map((c) => c.toJson()).toList(),
   };
   factory ExportProfile.fromJson(Map<String, dynamic> j) => ExportProfile(
@@ -161,11 +175,46 @@ class ExportProfile {
     includeBreaks: j['includeBreaks'] as bool,
     header: j['header'] as bool,
     bom: j['bom'] as bool,
-    columns: (j['columns'] as List)
-        .map((c) => ExportColumn.fromJson(c as Map<String, dynamic>))
-        .toList(),
+    rounding: j['rounding'] as String? ?? 'nearest',
+    columns: [
+      ...(j['columns'] as List).map(
+        (c) => ExportColumn.fromJson(c as Map<String, dynamic>),
+      ),
+      if (j['rounding'] == null &&
+          !(j['columns'] as List).any((c) => c['field'] == 'note'))
+        const ExportColumn(ExportField.note, 'F9-Text'),
+    ],
   );
 }
+
+class DeletedTimes {
+  const DeletedTimes({
+    required this.entries,
+    required this.dayNotes,
+    required this.label,
+  });
+  final List<TimeEntry> entries;
+  final Map<String, Map<String, String>> dayNotes;
+  final String label;
+  Map<String, dynamic> toJson() => {
+    'entries': entries.map((e) => e.toJson()).toList(),
+    'dayNotes': dayNotes,
+    'label': label,
+  };
+  factory DeletedTimes.fromJson(Map<String, dynamic> j) => DeletedTimes(
+    entries: (j['entries'] as List)
+        .map((e) => TimeEntry.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    dayNotes: decodeDayNotes(j['dayNotes']),
+    label: j['label'] as String,
+  );
+}
+
+Map<String, Map<String, String>> decodeDayNotes(dynamic value) => value == null
+    ? {}
+    : (value as Map<String, dynamic>).map(
+        (day, notes) => MapEntry(day, Map<String, String>.from(notes as Map)),
+      );
 
 class TrackerData {
   TrackerData({
@@ -175,6 +224,9 @@ class TrackerData {
     this.lastProject = otherId,
     this.lastSeen,
     this.notice,
+    this.animal = 'dog',
+    this.dayNotes = const {},
+    this.deletedTimes,
   });
   final List<Project> projects;
   final List<TimeEntry> entries;
@@ -182,6 +234,9 @@ class TrackerData {
   final String lastProject;
   final DateTime? lastSeen;
   final String? notice;
+  final String animal;
+  final Map<String, Map<String, String>> dayNotes;
+  final DeletedTimes? deletedTimes;
   factory TrackerData.empty() => TrackerData(
     projects: [const Project(id: otherId, name: 'Anderes', color: 0xFF7A8391)],
     entries: [],
@@ -196,6 +251,10 @@ class TrackerData {
     DateTime? lastSeen,
     String? notice,
     bool clearNotice = false,
+    String? animal,
+    Map<String, Map<String, String>>? dayNotes,
+    DeletedTimes? deletedTimes,
+    bool clearDeletedTimes = false,
   }) => TrackerData(
     projects: projects ?? this.projects,
     entries: entries ?? this.entries,
@@ -203,7 +262,21 @@ class TrackerData {
     lastProject: lastProject ?? this.lastProject,
     lastSeen: lastSeen ?? this.lastSeen,
     notice: clearNotice ? null : notice ?? this.notice,
+    animal: animal ?? this.animal,
+    dayNotes: dayNotes ?? this.dayNotes,
+    deletedTimes: clearDeletedTimes ? null : deletedTimes ?? this.deletedTimes,
   );
+  String notesForDay(DateTime day, String projectId, DateTime now) {
+    final override = dayNotes[isoDay(day)]?[projectId];
+    if (override != null) return override;
+    return entriesForDay(this, day, now)
+        .where((e) => e.projectId == projectId)
+        .map((e) => e.note.trim())
+        .where((n) => n.isNotEmpty)
+        .toSet()
+        .join('; ');
+  }
+
   Map<String, dynamic> toJson() => {
     'schema': 1,
     'projects': projects.map((p) => p.toJson()).toList(),
@@ -212,6 +285,9 @@ class TrackerData {
     'lastProject': lastProject,
     'lastSeen': lastSeen?.toUtc().toIso8601String(),
     'notice': notice,
+    'animal': animal,
+    'dayNotes': dayNotes,
+    'deletedTimes': deletedTimes?.toJson(),
   };
   factory TrackerData.fromJson(Map<String, dynamic> j) {
     if (j['schema'] != 1) {
@@ -230,6 +306,13 @@ class TrackerData {
           ? null
           : DateTime.parse(j['lastSeen'] as String).toLocal(),
       notice: j['notice'] as String?,
+      animal: animalNames.containsKey(j['animal'])
+          ? j['animal'] as String
+          : 'dog',
+      dayNotes: decodeDayNotes(j['dayNotes']),
+      deletedTimes: j['deletedTimes'] == null
+          ? null
+          : DeletedTimes.fromJson(j['deletedTimes'] as Map<String, dynamic>),
     );
     final ids = data.projects.map((p) => p.id).toSet();
     if (!ids.contains(otherId) ||

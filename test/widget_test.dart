@@ -48,7 +48,7 @@ void main() {
     expect(tracker.data.projects.last.name, 'Brückenbau');
     await tester.tap(find.byKey(const Key('compact')));
     await tester.pumpAndSettle();
-    await tester.binding.setSurfaceSize(const Size(760, 158));
+    await tester.binding.setSurfaceSize(const Size(760, 202));
     await tester.pumpAndSettle();
     expect(find.text('Dein Tag im Blick.'), findsNothing);
     expect(tester.takeException(), isNull);
@@ -148,6 +148,124 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(760, 600));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    tracker.dispose();
+  });
+  testWidgets(
+    'previous days can be edited without changing the active project',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1120, 950));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final now = DateTime(2026, 10, 23, 12);
+      final tracker = Tracker(
+        TrackerData.empty().copy(
+          entries: [
+            TimeEntry(
+              id: 'yesterday',
+              start: DateTime(2026, 10, 22, 9),
+              end: DateTime(2026, 10, 22, 10),
+              projectId: otherId,
+            ),
+            TimeEntry(
+              id: 'today',
+              start: DateTime(2026, 10, 23, 10),
+              end: DateTime(2026, 10, 23, 11),
+              projectId: otherId,
+            ),
+          ],
+        ),
+        MemoryStore(),
+        clock: () => now,
+      );
+      await tracker.start();
+      final activeId = tracker.data.active!.id;
+      await tester.pumpWidget(StundehundApp(tracker: tracker));
+      await tester.pumpAndSettle();
+      expect(find.text('AKTIV · Anderes'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('previous-day')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('entry-yesterday')));
+      await tester.tap(find.byKey(const Key('entry-yesterday')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).at(3), '10:15:00');
+      await tester.tap(find.text('Speichern'));
+      await tester.pumpAndSettle();
+      expect(
+        tracker.data.entries
+            .firstWhere((e) => e.id == 'yesterday')
+            .duration(now)
+            .inMinutes,
+        75,
+      );
+      expect(tracker.data.active!.id, activeId);
+      await tester.ensureVisible(find.text('F9-Texte für diesen Tag'));
+      await tester.tap(find.text('F9-Texte für diesen Tag'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Projektkoordination'));
+      await tester.enterText(
+        find.byKey(const Key('day-note-other')),
+        'Projektkoordination; eigene Ergänzung',
+      );
+      await tester.tap(find.text('Speichern'));
+      await tester.pumpAndSettle();
+      expect(
+        tracker.data.notesForDay(DateTime(2026, 10, 22), otherId, now),
+        'Projektkoordination; eigene Ergänzung',
+      );
+      expect(tracker.data.notesForDay(now, otherId, now), '');
+      await tester.ensureVisible(find.byKey(const Key('today')));
+      await tester.tap(find.byKey(const Key('today')));
+      await tester.pumpAndSettle();
+      expect(find.text('Dein Tag im Blick.'), findsOneWidget);
+      await tester.tap(find.text('Einstellungen'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('animal-owl')));
+      await tester.pumpAndSettle();
+      expect(tracker.data.animal, 'owl');
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      tracker.dispose();
+    },
+  );
+
+  testWidgets('day deletion requires confirmation and can be restored', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1120, 950));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final now = DateTime(2026, 10, 23, 12);
+    final tracker = Tracker(
+      TrackerData.empty().copy(
+        entries: [
+          TimeEntry(
+            id: 'today',
+            start: DateTime(2026, 10, 23, 10),
+            end: DateTime(2026, 10, 23, 11),
+            projectId: otherId,
+          ),
+        ],
+      ),
+      MemoryStore(),
+      clock: () => now,
+    );
+    await tester.pumpWidget(StundehundApp(tracker: tracker));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tag löschen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Abbrechen'));
+    await tester.pumpAndSettle();
+    expect(tracker.data.entries.length, 1);
+    await tester.tap(find.text('Tag löschen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Tag löschen'));
+    await tester.pumpAndSettle();
+    expect(tracker.data.entries, isEmpty);
+    await tester.tap(find.text('Einstellungen'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Wiederherstellen'));
+    await tester.tap(find.text('Wiederherstellen'));
+    await tester.pumpAndSettle();
+    expect(tracker.data.entries.single.duration(now).inHours, 1);
     await tester.pumpWidget(const SizedBox());
     tracker.dispose();
   });

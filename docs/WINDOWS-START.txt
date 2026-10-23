@@ -1,4 +1,4 @@
-STUNDEHUND 0.1.1 - Windows 11 (x64)
+STUNDEHUND 0.2.0 - Windows 11 (x64)
 
 1. Das gesamte ZIP in einen eigenen Ordner entpacken.
 2. stundehund.exe starten. DLLs und den Ordner data daneben belassen.
@@ -6,9 +6,21 @@ STUNDEHUND 0.1.1 - Windows 11 (x64)
 4. Start oder eine Projekt-Taste startet die Erfassung. Ein Projektwechsel
    beendet automatisch den vorherigen Abschnitt. Pause / Weiter für Pausen.
 5. Über das Pfeil-Symbol rechts oben zur kleinen Leiste wechseln.
-   Diese bleibt oben am Bildschirm über anderen Fenstern sichtbar.
-6. Stop beendet die Erfassung. CSV exportieren zeigt eine Vorschau und
-   öffnet den Speichern-Dialog für den ausgewählten Tag.
+   Diese bleibt über anderen Fenstern sichtbar. Beim Umschalten bleibt
+   die linke obere Ecke an derselben Position. Das aktive Projekt ist weiss
+   hervorgehoben und mit AKTIV beschriftet.
+6. F9-Text erfassen: Stichworte pro Projekt/Tag aus Vorschlägen wählen oder
+   eigene Texte ergänzen. Fehlende Texte werden vor dem Export abgefragt.
+7. Vorheriger Tag, Kalender und Heute wählen den angezeigten Tag. Auch alte
+   Einträge und F9-Texte können bearbeitet werden. Der aktuelle Timer läuft
+   dabei unverändert weiter.
+8. Stop beendet die Erfassung. CSV exportieren zeigt exakte und gerundete
+   Projektzeiten. Pro Projekt/Tag wird zuerst summiert, dann auf die nächsten
+   15 Minuten gerundet (7:30 Minuten wird aufgerundet). Rohzeiten bleiben
+   gespeichert. Auf 0 gerundete Projekte entfallen im Export.
+9. Tag löschen entfernt nach Rückfrage nur diesen Tag. Einstellungen bietet
+   Alle Zeitdaten zurücksetzen und Letzte Löschung wiederherstellen.
+10. Unter Einstellungen zwischen Hund, Eichhörnchen und Eule wählen.
 
 ABACUS
 Die CSV ist konfigurierbar. Eine direkte Kompatibilität mit eurer konkreten
@@ -28,6 +40,7 @@ TASTATUR (wenn Stundehund fokussiert ist)
 Strg+1 bis Strg+9: Projekt entsprechend der Reihenfolge in der Leiste
 Strg+Leertaste: Start / Pause / Weiter
 Strg+Umschalt+S: Start / Stop
+F9 (ggf. Fn+F9): F9-Text des gewählten Tages; in der Leiste für heute
 
 Das Programm ist nicht digital signiert. Für den Einsatz auf einem
 Firmencomputer gelten die Installationsvorgaben eurer IT.

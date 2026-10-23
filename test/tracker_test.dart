@@ -26,6 +26,10 @@ void main() {
     store = MemoryStore();
     tracker = Tracker(
       TrackerData.empty().copy(
+        dayNotes: {
+          '2026-10-11': {'p1': 'Koordination', otherId: 'Allgemein'},
+          '2026-10-12': {'p1': 'Koordination', otherId: 'Allgemein'},
+        },
         projects: [
           ...TrackerData.empty().projects,
           const Project(
@@ -194,6 +198,7 @@ void main() {
       DateTime(2026, 10, 11),
       now,
       profile: const ExportProfile(
+        rounding: 'none',
         summary: false,
         bom: false,
         columns: [
@@ -217,6 +222,7 @@ void main() {
         now,
         now,
         profile: const ExportProfile(
+          rounding: 'none',
           bom: false,
           decimalComma: true,
           columns: [
@@ -244,6 +250,7 @@ void main() {
         now,
         now,
         profile: const ExportProfile(
+          rounding: 'none',
           bom: false,
           columns: [
             ExportColumn(ExportField.duration, 'h'),
@@ -263,7 +270,7 @@ void main() {
       expect(() => CsvExport.create(tracker.data, now, now), throwsStateError);
       expect(
         CsvExport.create(tracker.data, DateTime(2026, 10, 11), now),
-        contains('1.0000'),
+        contains('1.00'),
       );
     },
   );

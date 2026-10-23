@@ -15,12 +15,14 @@ try {
     flutter pub get --enforce-lockfile
     if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed.' }
     if (-not $SkipChecks) {
-        dart format --output=none --set-exit-if-changed lib test
+        dart format --output=none --set-exit-if-changed lib test integration_test
         if ($LASTEXITCODE -ne 0) { throw 'Formatting check failed.' }
         flutter analyze
         if ($LASTEXITCODE -ne 0) { throw 'Static analysis failed.' }
         flutter test
         if ($LASTEXITCODE -ne 0) { throw 'Tests failed.' }
+        flutter test integration_test/window_test.dart -d windows
+        if ($LASTEXITCODE -ne 0) { throw 'Native window regression test failed.' }
     }
     flutter build windows --release
     if ($LASTEXITCODE -ne 0) { throw 'Windows compilation failed.' }

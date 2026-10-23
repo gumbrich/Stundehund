@@ -163,6 +163,164 @@ class Tracker extends ChangeNotifier {
   Future<bool> saveProfile(ExportProfile profile) =>
       _commit(data.copy(profile: profile));
   Future<bool> dismissNotice() => _commit(data.copy(clearNotice: true));
+  Future<bool> saveAnimal(String animal) async {
+    if (!animalNames.containsKey(animal)) return false;
+    return _commit(data.copy(animal: animal));
+  }
+
+  Future<bool> saveDayNotes(DateTime day, Map<String, String> values) =>
+      _commit(
+        data.copy(
+          dayNotes: {
+            ...data.dayNotes,
+            isoDay(day): {
+              ...?data.dayNotes[isoDay(day)],
+              ...values.map((id, value) => MapEntry(id, value.trim())),
+            },
+          },
+        ),
+      );
+
+  Future<bool> deleteDay(DateTime day) async {
+    if (busy) return false;
+    final from = dayStart(day);
+    final until = DateTime(day.year, day.month, day.day + 1);
+    final now = clock();
+    final kept = <TimeEntry>[];
+    final removed = <TimeEntry>[];
+    for (final e in data.entries) {
+      final end = e.end ?? now;
+      final intersects =
+          e.start.isBefore(until) &&
+          (end.isAfter(from) || (e.end == null && !end.isBefore(from)));
+      if (!intersects) {
+        kept.add(e);
+        continue;
+      }
+      if (e.start.isBefore(from)) {
+        kept.add(
+          TimeEntry(
+            id: nextId(),
+            start: e.start,
+            end: from,
+            projectId: e.projectId,
+            note: e.note,
+          ),
+        );
+      }
+      if (end.isAfter(until)) {
+        kept.add(
+          TimeEntry(
+            id: nextId(),
+            start: until,
+            end: e.end,
+            projectId: e.projectId,
+            note: e.note,
+          ),
+        );
+      }
+      final cutStart = e.start.isBefore(from) ? from : e.start;
+      final cutEnd = end.isAfter(until) ? until : end;
+      if (cutEnd.isAfter(cutStart)) {
+        removed.add(
+          TimeEntry(
+            id: nextId(),
+            start: cutStart,
+            end: cutEnd,
+            projectId: e.projectId,
+            note: e.note,
+          ),
+        );
+      }
+    }
+    final key = isoDay(day);
+    final notes = {...data.dayNotes}..remove(key);
+    return _commit(
+      data.copy(
+        entries: kept,
+        dayNotes: notes,
+        lastSeen: now,
+        clearNotice: true,
+        deletedTimes: DeletedTimes(
+          entries: removed,
+          dayNotes: {
+            if (data.dayNotes.containsKey(key)) key: data.dayNotes[key]!,
+          },
+          label: 'Tag $key',
+        ),
+      ),
+    );
+  }
+
+  Future<bool> resetTimes() async {
+    if (busy) return false;
+    final now = clock();
+    final removed = data.entries
+        .map((e) => e.end == null ? e.finish(now) : e)
+        .toList();
+    return _commit(
+      data.copy(
+        entries: [],
+        dayNotes: {},
+        lastSeen: now,
+        clearNotice: true,
+        deletedTimes: DeletedTimes(
+          entries: removed,
+          dayNotes: data.dayNotes,
+          label: 'Alle Zeitdaten',
+        ),
+      ),
+    );
+  }
+
+  Future<bool> restoreDeletedTimes() async {
+    final deleted = data.deletedTimes;
+    if (deleted == null || busy) return false;
+    final now = clock();
+    for (final removed in deleted.entries) {
+      if (data.entries.any(
+        (e) =>
+            removed.start.isBefore(e.end ?? now) &&
+            removed.end!.isAfter(e.start),
+      )) {
+        error =
+            'Wiederherstellung würde neue Einträge überschneiden. Bitte diese zuerst korrigieren.';
+        notifyListeners();
+        return false;
+      }
+    }
+    final notes = data.dayNotes.map(
+      (day, values) => MapEntry(day, {...values}),
+    );
+    for (final day in deleted.dayNotes.entries) {
+      final values = notes.putIfAbsent(day.key, () => {});
+      for (final value in day.value.entries) {
+        values[value.key] = {
+          value.value,
+          if (values[value.key] != null) values[value.key]!,
+        }.where((v) => v.isNotEmpty).join('; ');
+      }
+    }
+    return _commit(
+      data.copy(
+        entries: [
+          ...data.entries,
+          ...deleted.entries.map(
+            (e) => TimeEntry(
+              id: nextId(),
+              start: e.start,
+              end: e.end,
+              projectId: e.projectId,
+              note: e.note,
+            ),
+          ),
+        ]..sort((a, b) => a.start.compareTo(b.start)),
+        dayNotes: notes,
+        clearDeletedTimes: true,
+      ),
+    );
+  }
+
   String? validateEntry(TimeEntry entry) {
     if (entry.end == null || !entry.end!.isAfter(entry.start)) {
       return 'Das Ende muss nach dem Beginn liegen.';
@@ -204,7 +362,14 @@ class Tracker extends ChangeNotifier {
       return false;
     }
     return _commit(
-      data.copy(entries: data.entries.where((e) => e.id != id).toList()),
+      data.copy(
+        entries: data.entries.where((e) => e.id != id).toList(),
+        deletedTimes: DeletedTimes(
+          entries: data.entries.where((e) => e.id == id).toList(),
+          dayNotes: {},
+          label: 'Eintrag',
+        ),
+      ),
     );
   }
 }

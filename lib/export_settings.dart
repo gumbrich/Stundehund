@@ -15,6 +15,7 @@ class _ExportSettingsState extends State<ExportSettings> {
   );
   late String delimiter = widget.tracker.data.profile.delimiter;
   late String dateFormat = widget.tracker.data.profile.dateFormat;
+  late String rounding = widget.tracker.data.profile.rounding;
   late String durationFormat = widget.tracker.data.profile.durationFormat;
   late bool decimalComma = widget.tracker.data.profile.decimalComma;
   late bool summary = widget.tracker.data.profile.summary;
@@ -27,9 +28,9 @@ class _ExportSettingsState extends State<ExportSettings> {
       (f) => !widget.tracker.data.profile.columns.any((c) => c.field == f),
     ),
   ];
-  late Set<ExportField> enabled = widget.tracker.data.profile.columns
-      .map((c) => c.field)
-      .toSet();
+  late Set<ExportField> enabled =
+      widget.tracker.data.profile.columns.map((c) => c.field).toSet()
+        ..add(ExportField.note);
   late Map<ExportField, TextEditingController> headers = {
     for (final f in ExportField.values)
       f: TextEditingController(
@@ -71,6 +72,7 @@ class _ExportSettingsState extends State<ExportSettings> {
       includeBreaks: includeBreaks,
       header: header,
       bom: bom,
+      rounding: rounding,
       columns: order
           .where(enabled.contains)
           .map((f) => ExportColumn(f, headers[f]!.text.trim()))
@@ -92,6 +94,7 @@ class _ExportSettingsState extends State<ExportSettings> {
     Map<String, String> values,
     void Function(String) onChange,
   ) => DropdownButtonFormField<String>(
+    key: ValueKey('$title:$value'),
     initialValue: value,
     isExpanded: true,
     decoration: InputDecoration(labelText: title),
@@ -191,15 +194,28 @@ class _ExportSettingsState extends State<ExportSettings> {
                 controller: employee,
                 decoration: const InputDecoration(labelText: 'Personalnummer'),
               ),
-              dropdown(
-                'Zeilen',
-                summary ? 'summary' : 'interval',
-                const {
-                  'summary': 'Eine Zeile pro Projekt und Tag',
-                  'interval': 'Eine Zeile pro Zeitabschnitt',
-                },
-                (v) => summary = v == 'summary',
-              ),
+              rounding != 'none'
+                  ? const InputDecorator(
+                      decoration: InputDecoration(labelText: 'Zeilen'),
+                      child: Text('Eine Zeile pro Projekt und Tag'),
+                    )
+                  : dropdown(
+                      'Zeilen',
+                      summary ? 'summary' : 'interval',
+                      const {
+                        'summary': 'Eine Zeile pro Projekt und Tag',
+                        'interval': 'Eine Zeile pro Zeitabschnitt',
+                      },
+                      (v) => summary = v == 'summary',
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 18),
+              child: dropdown('Rundung pro Projekt / Tag', rounding, const {
+                'nearest':
+                    '15 Minuten · kaufmännisch (ab 7½ Minuten aufrunden)',
+                'none': 'Keine Rundung · Rohdaten',
+              }, (v) => rounding = v),
             ),
             pair(
               dropdown('Trennzeichen', delimiter, const {
@@ -214,9 +230,10 @@ class _ExportSettingsState extends State<ExportSettings> {
             ),
             pair(
               dropdown('Dauer', durationFormat, const {
-                'decimal': 'Dezimalstunden (1.5000)',
-                'minutes': 'Minuten (90.00)',
-                'hhmmss': 'Stunden:Minuten:Sekunden (01:30:00)',
+                'decimal': 'Dezimalstunden (1.50)',
+                'minutes': 'Minuten (90)',
+                'hhmm': 'Stunden:Minuten (01:30)',
+                'hhmmss': 'Sekunden nur ohne Rundung',
               }, (v) => durationFormat = v),
               dropdown(
                 'Dezimalzeichen',
@@ -245,8 +262,8 @@ class _ExportSettingsState extends State<ExportSettings> {
             ),
             const SizedBox(height: 6),
             Text(
-              summary
-                  ? '«Von» und «Bis» bleiben bei Tagessummen leer. Die Dauer enthält nur die tatsächlich erfasste Zeit.'
+              (rounding != 'none' || summary)
+                  ? '«Von» und «Bis» bleiben bei Tagessummen leer.'
                   : 'Zeitabschnitte werden an Mitternacht getrennt. Das Tagesende wird als 24:00:00 ausgegeben.',
               style: const TextStyle(fontSize: 12, color: Color(0xFF747D88)),
             ),
@@ -254,7 +271,7 @@ class _ExportSettingsState extends State<ExportSettings> {
             for (var i = 0; i < order.length; i++) columnRow(order[i], i),
             const SizedBox(height: 20),
             const Text(
-              'Die Rohdaten bleiben sekundengenau erhalten. Dezimalstunden werden erst beim Export auf vier Nachkommastellen gerundet. Dateien verwenden UTF-8 und Windows-Zeilenumbrüche (CRLF).',
+              'Die Projektzeiten werden zuerst pro Tag summiert und erst dann gerundet. Die Vorschau zeigt Rohzeit und Exportzeit. Auf 0 gerundete Projekte entfallen im CSV. F9-Texte sind für bearbeitete Projekte erforderlich. Dateien verwenden UTF-8 und Windows-Zeilenumbrüche (CRLF).',
               style: TextStyle(
                 fontSize: 12,
                 color: Color(0xFF747D88),
@@ -284,13 +301,15 @@ class _ExportSettingsState extends State<ExportSettings> {
       children: [
         Checkbox(
           value: enabled.contains(field),
-          onChanged: (v) => setState(() {
-            if (v!) {
-              enabled.add(field);
-            } else {
-              enabled.remove(field);
-            }
-          }),
+          onChanged: field == ExportField.note
+              ? null
+              : (v) => setState(() {
+                  if (v!) {
+                    enabled.add(field);
+                  } else {
+                    enabled.remove(field);
+                  }
+                }),
         ),
         SizedBox(
           width: 140,

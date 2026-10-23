@@ -4,16 +4,17 @@ A small, private Windows desktop timekeeper. Click a coloured project button,
 work, switch projects, and export the day. German (Swiss) interface.
 The top workday timer displays hours and minutes (`HH:MM`).
 
-The dog-in-profile and clock mark is shared by the app, Windows icon and macOS
-iconset. Regenerate it with `python3 tool/generate_icons.py` (requires Pillow);
-the editable vector is `docs/stundehund.svg`.
+Choose **Hund**, **Eichhörnchen** or **Eule** under **Einstellungen**. The choice
+is saved and updates the in-app mark and the running Windows window/taskbar or
+Mac Dock icon. The executable/Finder file icon remains the default dog.
+Regenerate artwork with `python3 tool/generate_icons.py` (Pillow required).
 
 ## Download and run
 
-**Windows preview:** the native Windows release build, static analysis and all
-16 automated tests passed on GitHub's Windows runner. The desktop interface was
-also checked interactively on macOS. An interactive Windows 11 smoke test remains
-to be done.
+**Desktop preview:** the build workflow runs static analysis, the automated
+regression suite and a native window test on Windows before creating the ZIP.
+The native window test repeatedly switches compact/expanded modes and minimises /
+restores the real application window, checking its coordinates.
 
 Download **Stundehund-Windows-x64.zip** from this private repository's
 [Releases](https://github.com/gumbrich/Stundehund/releases), extract the **whole folder**, and run `stundehund.exe`.
@@ -36,13 +37,25 @@ development and native integration testing.
    project, initially Anderes. Only one project runs at a time.
 3. Switch projects with one click. **Pause** excludes breaks from work totals;
    **Weiter** resumes the preceding project. Selecting a project also ends a break.
-4. The upper-right arrow switches to a compact, draggable bar positioned at the
-   top of the primary screen and kept above other windows. Expand it to review.
+4. The upper-right arrow switches to a compact, draggable bar kept above other
+   windows. Switching layouts preserves its current top-left position, including
+   on a secondary screen. Drag it to the position you prefer. The active project
+   has a white tile, checkmark and **AKTIV** label, plus a persistent status line.
+   The Windows taskbar title also identifies the active project.
 5. Press **Stop**. Review project totals and individual intervals. Click a closed
    interval to correct its project, times or note. **Nachtragen** adds missed time;
    overlapping and future intervals are rejected.
-6. **CSV exportieren** previews and saves the selected date. The calendar provides
-   access to earlier days. Stopping does not erase anything and you can restart.
+6. **F9-Text erfassen** (or F9 / Fn+F9 according to the keyboard) records daily
+   project keywords. Choose preset phrases, combine them, or type custom text.
+   Missing F9 texts must be completed before export. These are descriptive texts,
+   separate from the project's Abacus activity code (**Leistungsart**).
+7. **Vorheriger Tag**, the calendar, the next-day arrow and **Heute** let you review
+   any earlier day. Click a closed interval to edit its exact start/end, project
+   or note. Edit that day's F9 texts separately. Browsing/editing a previous day
+   does not switch the live project timer. F9 follows the selected day in the
+   dashboard; the compact bar always refers to today.
+8. **CSV exportieren** previews raw and rounded project totals for the selected
+   date. Stopping does not erase anything and you can restart.
 
 Keyboard shortcuts apply while the app has focus: `Ctrl+1`…`Ctrl+9` selects a
 project in bar order; `Ctrl+Space` starts/pauses/resumes; `Ctrl+Shift+S` starts/stops.
@@ -67,18 +80,49 @@ Configurable options:
 
 - Column selection, order and header names: date, employee, project number/name,
   activity, start/end, duration and note.
-- One row per project/day or one row per interval; optional breaks.
+- Nearest-quarter-hour daily project totals by default. Optional unrounded mode
+  supports daily totals or separate intervals; optional breaks.
 - Semicolon, comma or tab; decimal point or comma; ISO or Swiss dates.
-- Decimal hours (4 decimals), minutes (2 decimals), or `HH:MM:SS`.
+- Rounded decimal hours (e.g. `1.25`), whole minutes or `HH:MM`; unrounded mode
+  also supports decimal hours with 4 places, minutes with 2 places, or `HH:MM:SS`.
 - Optional header and UTF-8 BOM; CRLF line endings and CSV quoting.
 
-Raw timestamps are preserved. Summaries aggregate before rounding and leave
-start/end blank because the work may be discontinuous. Overnight intervals split
-at local calendar midnight; an interval ending at that boundary exports `24:00:00`.
-There is no implicit five/fifteen-minute payroll rounding. Leading zeroes in codes
+Exact timestamps and intervals are preserved in local storage and JSON backups.
+Project totals and interval details in the dashboard continue to show raw time.
+Export first sums **all intervals of each project within the selected calendar
+day**, then rounds to the nearest 15 minutes (7 minutes 30 seconds rounds up).
+For example, 22 minutes becomes 15 minutes; 23 minutes becomes 30 minutes. Short
+switches are never rounded individually. The preview shows raw versus rounded
+values; project rounding can change the overall daily total. Projects rounded to
+zero are shown in the preview but omitted from the CSV. If all rows round to zero,
+the preview explains this and no empty report is saved. For unrounded exports,
+choose **Keine Rundung · Rohdaten** in the export profile.
+
+Summaries leave start/end blank because project work may be discontinuous.
+Overnight intervals split at local calendar midnight; an interval ending at that
+boundary exports `24:00:00`. The F9 text is kept per project and day and included
+in the default CSV. Existing interval notes are used as a fallback until a daily
+F9 text is entered. Leading zeroes in codes
 are preserved in the CSV text; spreadsheet software may reinterpret them when
 opening a file. Text is exported verbatim, so only use trusted project names/notes
 when opening exports in software that evaluates spreadsheet formulas.
+
+## Delete and reset
+
+**Tag löschen** deletes only the selected day's intervals and F9 texts after
+confirmation. Today's running interval is stopped if it belongs to that day.
+Intervals crossing midnight are clipped so adjacent days remain intact.
+
+**Einstellungen → Alle Zeitdaten zurücksetzen** clears all times/F9 texts while
+keeping projects, the animal choice and export settings. There are also separate
+controls for resetting the export profile and explicitly centring the window.
+
+**Letzte Löschung wiederherstellen** restores the latest deleted day, reset or
+individual entry, even after restarting the app. This recovery point is replaced
+by the next deletion. Restoring merges with new work; it refuses overlapping
+records instead of overwriting them. Restored intervals are closed, so restoring
+a day does not accidentally restart its timer. Regular JSON backups are still
+recommended.
 
 ## Storage and recovery
 
@@ -112,6 +156,7 @@ Visual Studio with **Desktop development with C++**, plus the Windows SDK.
 flutter pub get --enforce-lockfile
 flutter analyze
 flutter test
+flutter test integration_test/window_test.dart -d windows
 flutter run -d windows
 flutter build windows --release
 ```
@@ -135,6 +180,8 @@ Core code: `model.dart` (data/calendar boundaries), `tracker.dart` (transitions)
 `storage.dart` (durable snapshots), `csv_export.dart` (mapping/formatting). UI and
 native window control are separated from timekeeping for deterministic testing.
 Tests cover switching, breaks, failures, restart/sleep recovery, manual edits,
-CSV formats/escaping/aggregation, midnight splitting, corrupted files and UI.
+CSV formats/escaping/aggregation, quarter-hour boundaries, exact-data retention,
+F9 text and migration, historical editing, deletion/restore, midnight splitting,
+corrupted files, animal selection and native window positions.
 
 Private software. All rights reserved. No affiliation with Abacus Research AG.
