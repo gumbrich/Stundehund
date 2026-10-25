@@ -589,118 +589,144 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
         child: Focus(
           autofocus: true,
           child: Scaffold(
-            body: Column(
-              children: [
-                timerBar(now, projects),
-                if (!compact)
-                  Expanded(
-                    child: Column(
-                      children: [
-                        if (tracker.error != null || data.notice != null)
-                          Container(
-                            color: const Color(0xFFFFEACB),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 8,
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.info_outline_rounded,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    tracker.error ?? data.notice!,
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ),
-                                if (tracker.error == null)
-                                  IconButton(
-                                    onPressed: tracker.busy
-                                        ? null
-                                        : tracker.dismissNotice,
-                                    icon: const Icon(Icons.close, size: 18),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(28, 10, 24, 0),
-                          child: Row(
+            // Native window bounds include the Windows border. In compact
+            // mode, let the bar shrink to the actual client area.
+            body: compact
+                ? Align(
+                    alignment: Alignment.topCenter,
+                    child: timerBar(now, projects),
+                  )
+                : Column(
+                    children: [
+                      timerBar(now, projects),
+                      if (!compact)
+                        Expanded(
+                          child: Column(
                             children: [
-                              Expanded(
-                                child: SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
+                              if (tracker.error != null || data.notice != null)
+                                Container(
+                                  color: const Color(0xFFFFEACB),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 8,
+                                  ),
                                   child: Row(
                                     children: [
-                                      navButton('Tagesübersicht', 0),
-                                      navButton('Projekte', 1),
-                                      navButton('Exportprofil', 2),
-                                      navButton('Einstellungen', 3),
+                                      const Icon(
+                                        Icons.info_outline_rounded,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          tracker.error ?? data.notice!,
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ),
+                                      if (tracker.error == null)
+                                        IconButton(
+                                          onPressed: tracker.busy
+                                              ? null
+                                              : tracker.dismissNotice,
+                                          icon: const Icon(
+                                            Icons.close,
+                                            size: 18,
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  28,
+                                  10,
+                                  24,
+                                  0,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: Row(
+                                          children: [
+                                            navButton('Tagesübersicht', 0),
+                                            navButton('Projekte', 1),
+                                            navButton('Exportprofil', 2),
+                                            navButton('Einstellungen', 3),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Tooltip(
+                                      message: 'Alle Daten als JSON sichern',
+                                      child: TextButton.icon(
+                                        onPressed: backup,
+                                        icon: const Icon(
+                                          Icons.backup_outlined,
+                                          size: 16,
+                                        ),
+                                        label: const Text('Sicherung'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              Tooltip(
-                                message: 'Alle Daten als JSON sichern',
-                                child: TextButton.icon(
-                                  onPressed: backup,
-                                  icon: const Icon(
-                                    Icons.backup_outlined,
-                                    size: 16,
-                                  ),
-                                  label: const Text('Sicherung'),
+                              const Divider(
+                                height: 1,
+                                color: Color(0xFFE2E3DE),
+                              ),
+                              Expanded(
+                                child: switch (tab) {
+                                  0 => journal(now),
+                                  1 => projectPage(),
+                                  2 => ExportSettings(tracker: tracker),
+                                  _ => settingsPage(),
+                                },
+                              ),
+                              Container(
+                                padding: const EdgeInsets.fromLTRB(
+                                  28,
+                                  8,
+                                  28,
+                                  12,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      tracker.busy
+                                          ? Icons.sync
+                                          : Icons.check_circle_outline,
+                                      size: 13,
+                                      color: muted,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      tracker.busy
+                                          ? 'Wird gespeichert …'
+                                          : 'Lokal auf diesem Gerät gespeichert',
+                                      style: const TextStyle(
+                                        color: muted,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    if (MediaQuery.sizeOf(context).width > 1050)
+                                      const Text(
+                                        'Strg + 1–9  Projekt wechseln   ·   Strg + Leertaste  Pause',
+                                        style: TextStyle(
+                                          color: muted,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const Divider(height: 1, color: Color(0xFFE2E3DE)),
-                        Expanded(
-                          child: switch (tab) {
-                            0 => journal(now),
-                            1 => projectPage(),
-                            2 => ExportSettings(tracker: tracker),
-                            _ => settingsPage(),
-                          },
-                        ),
-                        Container(
-                          padding: const EdgeInsets.fromLTRB(28, 8, 28, 12),
-                          child: Row(
-                            children: [
-                              Icon(
-                                tracker.busy
-                                    ? Icons.sync
-                                    : Icons.check_circle_outline,
-                                size: 13,
-                                color: muted,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                tracker.busy
-                                    ? 'Wird gespeichert …'
-                                    : 'Lokal auf diesem Gerät gespeichert',
-                                style: const TextStyle(
-                                  color: muted,
-                                  fontSize: 11,
-                                ),
-                              ),
-                              const Spacer(),
-                              if (MediaQuery.sizeOf(context).width > 1050)
-                                const Text(
-                                  'Strg + 1–9  Projekt wechseln   ·   Strg + Leertaste  Pause',
-                                  style: TextStyle(color: muted, fontSize: 11),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-              ],
-            ),
           ),
         ),
       );

@@ -52,6 +52,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Dein Tag im Blick.'), findsNothing);
     expect(tester.takeException(), isNull);
+    // Windows keeps a native border inside the requested outer window bounds.
+    await tester.binding.setSurfaceSize(const Size(744, 193));
+    await tester.pumpAndSettle();
+    expect(find.text('GESTOPPT'), findsOneWidget);
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     tracker.dispose();
   });

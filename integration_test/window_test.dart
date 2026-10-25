@@ -59,16 +59,19 @@ void main() {
         final small = await windowManager.getBounds();
         samePosition(small, original);
         expect(small.height, closeTo(compactBarHeight, 1));
+        expect(tester.takeException(), isNull);
         await windowManager.minimize();
         await tester.pump(const Duration(milliseconds: 300));
         await windowManager.restore();
         await windowManager.focus();
         await tester.pump(const Duration(milliseconds: 300));
         samePosition(await windowManager.getBounds(), small);
+        expect(tester.takeException(), isNull);
         await toggle();
         final full = await windowManager.getBounds();
         samePosition(full, original);
         expect(full.height, closeTo(original.height, 1));
+        expect(tester.takeException(), isNull);
       }
       await tester.pumpWidget(const SizedBox());
       await windowManager.setPreventClose(false);
