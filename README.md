@@ -173,8 +173,11 @@ The same script is used by the GitHub Windows build workflow.
 
 On macOS, use `flutter run -d macos`. The Windows workflow runs formatting,
 analysis, tests and a native release build; bundles Visual C++ runtime DLLs; and
-uploads a portable ZIP. Pushing a `v*` tag creates a release in this **private**
-repository. Workflow artifacts expire after 90 days; release assets remain.
+uploads a portable ZIP. Pushing a `v*` tag uploads the ZIP directly to a draft
+prerelease in this **private** repository; attach the Mac ZIP and checksums before
+publishing it. Direct release uploads do not depend on Actions artifact storage.
+Development artifact uploads are optional when that storage quota is full.
+Workflow artifacts expire after 90 days; release assets remain.
 
 Core code: `model.dart` (data/calendar boundaries), `tracker.dart` (transitions),
 `storage.dart` (durable snapshots), `csv_export.dart` (mapping/formatting). UI and
