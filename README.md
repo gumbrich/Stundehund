@@ -14,7 +14,11 @@ Regenerate artwork with `python3 tool/generate_icons.py` (Pillow required).
 **Desktop preview:** the build workflow runs static analysis, the automated
 regression suite and a native window test on Windows before creating the ZIP.
 The native window test repeatedly switches compact/expanded modes and minimises /
-restores the real application window, checking its coordinates.
+restores the real application window, checking its coordinates and width.
+It also emulates lid-close/open and suspend/resume by sending native Windows
+power messages through the app window procedure, then verifies the stopped
+timer and its saved snapshots. The injection endpoint exists only in debug
+builds; packaging checks that it is absent from the release executable.
 
 Download **Stundehund-Windows-x64.zip** from this private repository's
 [Releases](https://github.com/gumbrich/Stundehund/releases), extract the **whole folder**, and run `stundehund.exe`.
@@ -32,25 +36,36 @@ development and native integration testing.
 ## Daily workflow
 
 1. Add projects under **Projekte**, choosing a name, colour, optional Abacus
-   project number and activity code. **Anderes** is always available.
+   project number and activity code. **Anderes** is always available. Drag the
+   dotted handle on a project in the upper bar to reorder it. The order is saved,
+   applies in both layouts and determines the `Ctrl+1`…`Ctrl+9` shortcuts.
+   Editing a project keeps its position.
 2. Press **Start**, or a project button, to begin. Start resumes your last
    project, initially Anderes. Only one project runs at a time.
 3. Switch projects with one click. **Pause** excludes breaks from work totals;
    **Weiter** resumes the preceding project. Selecting a project also ends a break.
 4. The upper-right arrow switches to a compact, draggable bar kept above other
    windows. Switching layouts preserves its current top-left position, including
-   on a secondary screen. Drag it to the position you prefer. The active project
+   on a secondary screen. Drag it to the position you prefer. Resize the compact
+   bar horizontally at its left or right edge; its height stays fixed and the
+   chosen width carries over when expanding it. The active project
    has a white tile, checkmark and **AKTIV** label, plus a persistent status line.
    The Windows taskbar title also identifies the active project.
-5. Press **Stop**. Review project totals and individual intervals. Click a closed
-   interval to correct its project, times or note. **Nachtragen** adds missed time;
-   overlapping and future intervals are rejected.
+5. Review project totals and individual intervals in **Tagesverlauf**. Click an
+   interval to correct its project, times or note. If you started too late, click
+   the **running** interval and move its beginning back; recording continues.
+   **Nachtragen** proposes a free interval (up to one hour) for missed work.
+   Dates accept `09.11.2026` or `2026-11-09`, with a calendar picker; times accept
+   `8:30`, `08.30` or `08:30:00`. Unchanged timestamps keep their exact precision.
+   Overlaps name the conflicting project and interval; overlapping and future
+   times remain disallowed. Press **Stop** when finished.
 6. **F9-Text erfassen** (or F9 / Fn+F9 according to the keyboard) records daily
    project keywords. Choose preset phrases, combine them, or type custom text.
    Missing F9 texts must be completed before export. These are descriptive texts,
    separate from the project's Abacus activity code (**Leistungsart**).
 7. **Vorheriger Tag**, the calendar, the next-day arrow and **Heute** let you review
-   any earlier day. Click a closed interval to edit its exact start/end, project
+   any earlier day. Dates include short weekdays (**Mo**, **Di**, etc.).
+   Click an interval to edit its exact start/end, project
    or note. Edit that day's F9 texts separately. Browsing/editing a previous day
    does not switch the live project timer. F9 follows the selected day in the
    dashboard; the compact bar always refers to today.
@@ -135,9 +150,15 @@ never replaced with an empty database. Windows also uses a single-instance mutex
 
 On normal close, an active timer is stopped and saved after confirmation. After a
 crash/restart it is stopped at the last durable heartbeat (up to 30 seconds may
-need correction). A gap between timer ticks over 90 seconds, or a backwards clock
-jump, stops recording at the last observed tick and requests review. This avoids
-silently recording hours of sleep time. **Locking the screen alone does not pause
+need correction). Windows lid-close and system-suspend notifications stop the
+active interval automatically; macOS uses the system sleep notification. The
+native event timestamp is retained even if processing finishes after waking.
+Sleep events arriving during a save are queued, and failed saves retry at the
+original cutoff. Opening the lid/waking does not restart the timer: press Start.
+On macOS, closing the lid while the computer stays awake in external-display
+(clamshell) mode does not produce a sleep notification.
+A gap between timer ticks over 90 seconds, or a backwards clock jump, remains a
+fallback: it stops recording at the last observed tick and requests review. **Locking the screen alone does not pause
 recording**; use Pause before stepping away. This is not an idle/activity monitor.
 Timestamps are stored in UTC and displayed/grouped in the computer's current local
 timezone. Changing timezone can therefore change historical day grouping.
@@ -185,6 +206,12 @@ native window control are separated from timekeeping for deterministic testing.
 Tests cover switching, breaks, failures, restart/sleep recovery, manual edits,
 CSV formats/escaping/aggregation, quarter-hour boundaries, exact-data retention,
 F9 text and migration, historical editing, deletion/restore, midnight splitting,
-corrupted files, animal selection and native window positions.
+corrupted files, animal selection, persisted project order and drag/shortcut
+behaviour, running-start corrections, timestamp precision, short sleep and
+save/sleep races, and native window positions and horizontal resizing.
+
+Power notification references: [Windows power events](https://learn.microsoft.com/en-us/windows/win32/power/registering-for-power-events)
+and [macOS sleep notification](https://developer.apple.com/documentation/appkit/nsworkspace/willsleepnotification).
+Physical lid-close behaviour must also be verified on the target laptop.
 
 Private software. All rights reserved. No affiliation with Abacus Research AG.

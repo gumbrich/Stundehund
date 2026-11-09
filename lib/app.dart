@@ -13,6 +13,7 @@ import 'dialogs.dart';
 import 'export_settings.dart';
 import 'model.dart';
 import 'tracker.dart';
+import 'power_events.dart';
 
 const ink = Color(0xFF202C3C);
 const muted = Color(0xFF747D88);
@@ -121,6 +122,7 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
     timer = Timer.periodic(const Duration(seconds: 1), (_) => tracker.pulse());
     if (widget.desktop) {
       windowManager.addListener(this);
+      PowerEvents.listen(tracker);
       windowManager.setPreventClose(true);
       tracker.addListener(syncDesktopAppearance);
       syncDesktopAppearance();
@@ -132,6 +134,7 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
     timer?.cancel();
     if (widget.desktop) {
       windowManager.removeListener(this);
+      PowerEvents.stopListening();
       tracker.removeListener(syncDesktopAppearance);
     }
     super.dispose();
@@ -201,12 +204,17 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
       final bounds = windowGeometry.forMode(current, compact: next);
       if (next && mounted) setState(() => compact = true);
       await windowManager.setResizable(true);
+      await windowManager.setMaximumSize(const Size(100000, 100000));
       await windowManager.setMinimumSize(
         Size(760, next ? compactBarHeight : 600),
       );
       await windowManager.setBounds(bounds, animate: false);
       await windowManager.setAlwaysOnTop(next);
-      await windowManager.setResizable(!next);
+      if (next) {
+        await windowManager.setMaximumSize(
+          const Size(100000, compactBarHeight),
+        );
+      }
       if (!next && expandedWasMaximized) await windowManager.maximize();
       if (mounted) setState(() => compact = next);
     } catch (error) {
@@ -573,9 +581,7 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
         LogicalKeyboardKey.digit8,
         LogicalKeyboardKey.digit9,
       ];
-      final projects =
-          data.projects.where((p) => !p.archived && p.id != otherId).toList()
-            ..add(data.project(otherId));
+      final projects = data.projects.where((p) => !p.archived).toList();
       for (var i = 0; i < projects.length && i < keys.length; i++) {
         final project = projects[i];
         shortcuts[SingleActivator(keys[i], control: true)] = () {
@@ -584,7 +590,7 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
           }
         };
       }
-      return CallbackShortcuts(
+      final content = CallbackShortcuts(
         bindings: shortcuts,
         child: Focus(
           autofocus: true,
@@ -730,6 +736,15 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
           ),
         ),
       );
+      return widget.desktop
+          ? DragToResizeArea(
+              resizeEdgeSize: 6,
+              enableResizeEdges: compact
+                  ? const [ResizeEdge.left, ResizeEdge.right]
+                  : null,
+              child: content,
+            )
+          : content;
     },
   );
   Widget navButton(String title, int index) => Padding(
@@ -917,17 +932,19 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
             child: Row(
               children: [
                 Expanded(
-                  child: SingleChildScrollView(
+                  child: ReorderableListView(
                     scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (var i = 0; i < projects.length; i++)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: projectButton(projects[i], i, now),
-                          ),
-                      ],
-                    ),
+                    buildDefaultDragHandles: false,
+                    onReorder: (oldIndex, newIndex) =>
+                        tracker.reorderProjects(oldIndex, newIndex),
+                    children: [
+                      for (var i = 0; i < projects.length; i++)
+                        Padding(
+                          key: ValueKey('bar-${projects[i].id}'),
+                          padding: const EdgeInsets.only(right: 8),
+                          child: projectButton(projects[i], i, now),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1112,6 +1129,24 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  ReorderableDragStartListener(
+                    index: index,
+                    enabled: !tracker.busy,
+                    child: const Tooltip(
+                      message: 'Ziehen zum Umsortieren',
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 2,
+                        ),
+                        child: Icon(
+                          Icons.drag_indicator,
+                          size: 16,
+                          color: muted,
+                        ),
+                      ),
+                    ),
+                  ),
                   Icon(
                     active ? Icons.check_circle : Icons.circle,
                     color: color,
@@ -1173,15 +1208,6 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
         .fold(Duration.zero, (d, e) => d + e.duration(now));
     final isToday = selectedDay == dayStart(now);
     final canExport = entries.isNotEmpty && !entries.any((e) => e.end == null);
-    const days = [
-      'Montag',
-      'Dienstag',
-      'Mittwoch',
-      'Donnerstag',
-      'Freitag',
-      'Samstag',
-      'Sonntag',
-    ];
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(28, 26, 28, 16),
       child: Column(
@@ -1203,7 +1229,7 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      '${days[selectedDay.weekday - 1]}, ${two(selectedDay.day)}.${two(selectedDay.month)}.${selectedDay.year}',
+                      displayDay(selectedDay),
                       style: const TextStyle(color: muted, fontSize: 13),
                     ),
                   ],
@@ -1256,9 +1282,7 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
                   }
                 },
                 icon: const Icon(Icons.calendar_today_outlined, size: 16),
-                label: Text(
-                  '${two(selectedDay.day)}.${two(selectedDay.month)}.${selectedDay.year}',
-                ),
+                label: Text(displayDay(selectedDay)),
               ),
               IconButton(
                 key: const Key('next-day'),
@@ -1538,6 +1562,10 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
             ),
           ],
         ),
+        const Text(
+          'Eintrag anklicken, um Zeiten zu korrigieren – auch während die Erfassung läuft.',
+          style: TextStyle(color: muted, fontSize: 12),
+        ),
         const SizedBox(height: 10),
         if (entries.isEmpty)
           const Padding(
@@ -1560,7 +1588,7 @@ class _TrackerHomeState extends State<TrackerHome> with WindowListener {
         : tracker.data.project(entry.projectId!);
     return InkWell(
       key: Key('entry-${entry.id}'),
-      onTap: original.end == null ? null : () => editEntry(original),
+      onTap: tracker.busy ? null : () => editEntry(original),
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),

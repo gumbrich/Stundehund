@@ -1,7 +1,7 @@
 name: stundehund
 description: Private desktop timekeeping with a floating project bar and CSV export.
 publish_to: none
-version: 0.2.0+3
+version: 0.2.1+4
 environment:
   sdk: ^3.11.3
 dependencies:

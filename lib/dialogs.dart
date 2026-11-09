@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'model.dart';
 import 'tracker.dart';
+import 'entry_times.dart';
 
 class ProjectDialog extends StatefulWidget {
   const ProjectDialog({super.key, required this.tracker, this.project});
@@ -195,27 +196,21 @@ class EntryDialog extends StatefulWidget {
 }
 
 class _EntryDialogState extends State<EntryDialog> {
-  final form = GlobalKey<FormState>();
-  late final startDate = TextEditingController(
-    text: isoDay(widget.entry?.start ?? widget.day),
-  );
+  bool get running => widget.entry != null && widget.entry!.end == null;
+  late final initial =
+      widget.entry ?? suggestedEntry(widget.tracker, widget.day);
+  late final startDate = TextEditingController(text: swissDay(initial.start));
   late final endDate = TextEditingController(
-    text: isoDay(widget.entry?.end ?? widget.day),
+    text: swissDay(initial.end ?? initial.start),
   );
   late final start = TextEditingController(
-    text: widget.entry == null
-        ? '08:00:00'
-        : clockTime(widget.entry!.start, seconds: true),
+    text: clockTime(initial.start, seconds: true),
   );
   late final end = TextEditingController(
-    text: widget.entry == null
-        ? '09:00:00'
-        : clockTime(widget.entry!.end!, seconds: true),
+    text: initial.end == null ? '' : clockTime(initial.end!, seconds: true),
   );
-  late final note = TextEditingController(text: widget.entry?.note ?? '');
-  late String project = widget.entry == null
-      ? otherId
-      : widget.entry!.projectId ?? '__pause';
+  late final note = TextEditingController(text: initial.note);
+  late String project = initial.projectId ?? '__pause';
   String? error;
   bool saving = false;
   @override
@@ -226,30 +221,44 @@ class _EntryDialogState extends State<EntryDialog> {
     super.dispose();
   }
 
-  DateTime? parse(String day, String time) {
-    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(day) ||
-        !RegExp(r'^\d{2}:\d{2}(:\d{2})?$').hasMatch(time)) {
-      return null;
+  DateTime? value(
+    TextEditingController date,
+    TextEditingController time,
+    DateTime? original,
+  ) {
+    // Preserve exact stored boundaries when only the project or note is edited.
+    if (original != null &&
+        date.text == swissDay(original) &&
+        time.text == clockTime(original, seconds: true)) {
+      return original;
     }
-    final date = DateTime.tryParse('${day}T$time');
-    if (date == null ||
-        isoDay(date) != day ||
-        clockTime(date, seconds: time.length > 5) != time) {
-      return null;
+    return parseEntryTime(date.text, time.text);
+  }
+
+  Future<void> chooseDate(TextEditingController controller) async {
+    final now = widget.tracker.clock();
+    final selected = parseEntryTime(controller.text, '00:00') ?? widget.day;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: selected.isAfter(now) ? now : selected,
+      firstDate: selected.isBefore(DateTime(1970)) ? selected : DateTime(1970),
+      lastDate: now,
+    );
+    if (picked != null && mounted) {
+      setState(() => controller.text = swissDay(picked));
     }
-    return date;
   }
 
   Future<void> save() async {
     if (saving) {
       return;
     }
-    final from = parse(startDate.text.trim(), start.text.trim());
-    final until = parse(endDate.text.trim(), end.text.trim());
-    if (from == null || until == null) {
+    final from = value(startDate, start, initial.start);
+    final until = running ? null : value(endDate, end, initial.end);
+    if (from == null || (!running && until == null)) {
       setState(
         () => error =
-            'Bitte Datum als JJJJ-MM-TT und Zeit als HH:MM oder HH:MM:SS eingeben.',
+            'Bitte Datum als TT.MM.JJJJ (oder JJJJ-MM-TT) und Uhrzeit z. B. als 8:30 oder 08:30:00 eingeben.',
       );
       return;
     }
@@ -321,7 +330,11 @@ class _EntryDialogState extends State<EntryDialog> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: Text(
-      widget.entry == null ? 'Zeit nachtragen' : 'Eintrag bearbeiten',
+      widget.entry == null
+          ? 'Zeit nachtragen'
+          : running
+          ? 'Laufenden Eintrag korrigieren'
+          : 'Eintrag bearbeiten',
     ),
     content: SizedBox(
       width: 480,
@@ -342,15 +355,26 @@ class _EntryDialogState extends State<EntryDialog> {
               ],
               onChanged: (value) => setState(() => project = value!),
             ),
+            const SizedBox(height: 12),
+            Text(
+              running
+                  ? 'Zu spät gestartet? Beginn zurücksetzen und speichern. Die Erfassung läuft weiter.'
+                  : 'Freie Zeit nachtragen oder bestehende Zeiten korrigieren. Uhrzeit z. B. 8:30; Sekunden sind optional.',
+            ),
             const SizedBox(height: 20),
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: startDate,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Beginn · Datum',
-                      hintText: 'JJJJ-MM-TT',
+                      hintText: 'TT.MM.JJJJ',
+                      suffixIcon: IconButton(
+                        tooltip: 'Beginndatum wählen',
+                        onPressed: () => chooseDate(startDate),
+                        icon: const Icon(Icons.calendar_today, size: 18),
+                      ),
                     ),
                   ),
                 ),
@@ -372,8 +396,14 @@ class _EntryDialogState extends State<EntryDialog> {
                 Expanded(
                   child: TextField(
                     controller: endDate,
-                    decoration: const InputDecoration(
+                    enabled: !running,
+                    decoration: InputDecoration(
                       labelText: 'Ende · Datum',
+                      suffixIcon: IconButton(
+                        tooltip: 'Enddatum wählen',
+                        onPressed: running ? null : () => chooseDate(endDate),
+                        icon: const Icon(Icons.calendar_today, size: 18),
+                      ),
                     ),
                   ),
                 ),
@@ -381,7 +411,10 @@ class _EntryDialogState extends State<EntryDialog> {
                 Expanded(
                   child: TextField(
                     controller: end,
-                    decoration: const InputDecoration(labelText: 'Uhrzeit'),
+                    enabled: !running,
+                    decoration: InputDecoration(
+                      labelText: running ? 'Läuft weiter' : 'Uhrzeit',
+                    ),
                   ),
                 ),
               ],
@@ -405,7 +438,7 @@ class _EntryDialogState extends State<EntryDialog> {
       ),
     ),
     actions: [
-      if (widget.entry != null)
+      if (widget.entry != null && !running)
         TextButton(
           onPressed: saving ? null : remove,
           child: const Text('Löschen', style: TextStyle(color: Colors.red)),

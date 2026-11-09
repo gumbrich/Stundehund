@@ -80,9 +80,7 @@ class _DayNotesDialogState extends State<DayNotesDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text(
-      'F9-Text · ${two(widget.day.day)}.${two(widget.day.month)}.${widget.day.year}',
-    ),
+    title: Text('F9-Text · ${displayDay(widget.day)}'),
     content: SizedBox(
       width: 680,
       child: SingleChildScrollView(

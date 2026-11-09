@@ -11,7 +11,7 @@ class WindowGeometry {
     if (compact) _expandedSize = current.size;
     final size = compact
         ? Size(current.width, compactBarHeight)
-        : _expandedSize;
+        : Size(current.width, _expandedSize.height);
     return Rect.fromLTWH(current.left, current.top, size.width, size.height);
   }
 }

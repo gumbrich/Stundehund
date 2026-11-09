@@ -1,19 +1,24 @@
-STUNDEHUND 0.2.0 - Windows 11 (x64)
+STUNDEHUND 0.2.1 - Windows 11 (x64)
 
 1. Das gesamte ZIP in einen eigenen Ordner entpacken.
 2. stundehund.exe starten. DLLs und den Ordner data daneben belassen.
 3. Unter Projekte die eigenen Projekte, Farben und Abacus-Nummern eintragen.
+   Oben an den gepunkteten Griffen ziehen, um Projekte umzusortieren.
 4. Start oder eine Projekt-Taste startet die Erfassung. Ein Projektwechsel
    beendet automatisch den vorherigen Abschnitt. Pause / Weiter für Pausen.
 5. Über das Pfeil-Symbol rechts oben zur kleinen Leiste wechseln.
    Diese bleibt über anderen Fenstern sichtbar. Beim Umschalten bleibt
    die linke obere Ecke an derselben Position. Das aktive Projekt ist weiss
-   hervorgehoben und mit AKTIV beschriftet.
+   hervorgehoben und mit AKTIV beschriftet. Am linken oder rechten Rand
+   laesst sich auch die kleine Leiste breiter ziehen.
 6. F9-Text erfassen: Stichworte pro Projekt/Tag aus Vorschlägen wählen oder
    eigene Texte ergänzen. Fehlende Texte werden vor dem Export abgefragt.
 7. Vorheriger Tag, Kalender und Heute wählen den angezeigten Tag. Auch alte
    Einträge und F9-Texte können bearbeitet werden. Der aktuelle Timer läuft
-   dabei unverändert weiter.
+   dabei unverändert weiter. Mo, Di usw. zeigen den Wochentag.
+   Zu spaet gestartet? Den laufenden Eintrag im Tagesverlauf anklicken und
+   den Beginn korrigieren. Die Erfassung laeuft weiter. Nachtragen schlaegt
+   freie Zeit vor. Uhrzeiten z.B. 8:30, Datum z.B. 09.11.2026 eingeben.
 8. Stop beendet die Erfassung. CSV exportieren zeigt exakte und gerundete
    Projektzeiten. Pro Projekt/Tag wird zuerst summiert, dann auf die nächsten
    15 Minuten gerundet (7:30 Minuten wird aufgerundet). Rohzeiten bleiben
@@ -32,7 +37,9 @@ Alle Zeitdaten bleiben lokal. Kein Konto, keine Cloud, keine Telemetrie.
 Der genaue Datenordner steht unter Projekte. Regelmässig Sicherung verwenden.
 Bei Schliessen wird eine laufende Erfassung nach Rückfrage gestoppt.
 Nach einem Absturz endet sie am letzten Speicherpunkt (alle 30 Sekunden).
-Unterbrechungen über 90 Sekunden, z.B. Standby, stoppen die Erfassung.
+Zuklappen des Laptops oder Ruhezustand stoppen die Erfassung automatisch.
+Nach dem Aufklappen erneut Start druecken. Unterbrechungen ueber 90 Sekunden
+werden weiterhin als Absicherung erkannt.
 Letzte Endzeit prüfen, gegebenenfalls korrigieren, dann erneut starten.
 Eine Bildschirmsperre allein pausiert nicht automatisch.
 

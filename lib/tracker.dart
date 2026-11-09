@@ -12,6 +12,7 @@ class Tracker extends ChangeNotifier {
   String? error;
   int _counter = 0;
   DateTime? _previousTick;
+  DateTime? _pendingSuspend;
   String nextId() => '${clock().microsecondsSinceEpoch}-${_counter++}';
   Future<bool> _commit(TrackerData next) async {
     if (busy) {
@@ -31,6 +32,12 @@ class Tracker extends ChangeNotifier {
     } finally {
       busy = false;
       notifyListeners();
+      // A lid/sleep event must not be lost during a heartbeat or another save.
+      if (_pendingSuspend != null) {
+        final at = _pendingSuspend!;
+        _pendingSuspend = null;
+        await suspend(at);
+      }
     }
   }
 
@@ -59,6 +66,12 @@ class Tracker extends ChangeNotifier {
 
   Future<void> pulse() async {
     if (busy) {
+      return;
+    }
+    if (_pendingSuspend != null) {
+      final at = _pendingSuspend!;
+      _pendingSuspend = null;
+      await suspend(at);
       return;
     }
     final now = clock();
@@ -152,14 +165,62 @@ class Tracker extends ChangeNotifier {
     );
   }
 
+  Future<void> suspend(DateTime at) async {
+    if (busy) {
+      if (_pendingSuspend == null || at.isBefore(_pendingSuspend!)) {
+        _pendingSuspend = at;
+      }
+      return;
+    }
+    final active = data.active;
+    if (active == null || active.start.isAfter(at)) return;
+    final now = clock();
+    final end = at.isAfter(now) ? now : at;
+    _previousTick = now;
+    final saved = await _commit(
+      data.copy(
+        entries: [
+          ...data.entries.where((e) => e.id != active.id),
+          if (end.isAfter(active.start)) active.finish(end),
+        ],
+        lastSeen: now,
+        notice:
+            'Laptop zugeklappt oder Ruhezustand: Die Erfassung wurde automatisch gestoppt. Zum Weiterarbeiten erneut starten.',
+      ),
+    );
+    if (!saved) _pendingSuspend = at;
+  }
+
   Future<bool> saveProject(Project project) => _commit(
     data.copy(
-      projects: [...data.projects.where((p) => p.id != project.id), project],
+      projects: data.projects.any((p) => p.id == project.id)
+          ? data.projects.map((p) => p.id == project.id ? project : p).toList()
+          : [...data.projects, project],
       lastProject: project.archived && data.lastProject == project.id
           ? otherId
           : data.lastProject,
     ),
   );
+  Future<bool> reorderProjects(int oldIndex, int newIndex) async {
+    final visible = data.projects.where((p) => !p.archived).toList();
+    if (oldIndex < 0 ||
+        oldIndex >= visible.length ||
+        newIndex < 0 ||
+        newIndex > visible.length) {
+      return false;
+    }
+    if (newIndex > oldIndex) newIndex--;
+    visible.insert(newIndex, visible.removeAt(oldIndex));
+    var index = 0;
+    return _commit(
+      data.copy(
+        projects: [
+          for (final p in data.projects) p.archived ? p : visible[index++],
+        ],
+      ),
+    );
+  }
+
   Future<bool> saveProfile(ExportProfile profile) =>
       _commit(data.copy(profile: profile));
   Future<bool> dismissNotice() => _commit(data.copy(clearNotice: true));
@@ -322,22 +383,25 @@ class Tracker extends ChangeNotifier {
   }
 
   String? validateEntry(TimeEntry entry) {
-    if (entry.end == null || !entry.end!.isAfter(entry.start)) {
+    final now = clock();
+    final running = entry.end == null;
+    if (running && data.active?.id != entry.id) {
+      return 'Die Erfassung läuft nicht mehr. Bitte den Eintrag erneut öffnen.';
+    }
+    final end = entry.end ?? now;
+    if (!end.isAfter(entry.start)) {
       return 'Das Ende muss nach dem Beginn liegen.';
     }
-    if (entry.end!.isAfter(clock())) {
+    if (end.isAfter(now) || entry.start.isAfter(now)) {
       return 'Einträge dürfen nicht in der Zukunft liegen.';
     }
-    if (data.active?.id == entry.id) {
-      return 'Bitte zuerst die laufende Erfassung stoppen.';
-    }
-    if (data.entries.any(
-      (e) =>
-          e.id != entry.id &&
-          entry.start.isBefore(e.end ?? clock()) &&
-          entry.end!.isAfter(e.start),
-    )) {
-      return 'Der Zeitraum überschneidet sich mit einem anderen Eintrag.';
+    for (final e in data.entries) {
+      if (e.id != entry.id &&
+          (e.end == null || entry.start.isBefore(e.end!)) &&
+          (running || end.isAfter(e.start))) {
+        final name = e.isBreak ? 'Pause' : data.project(e.projectId!).name;
+        return 'Überschneidung mit $name (${displayDay(e.start)}, ${clockTime(e.start, seconds: true)} – ${e.end == null ? 'läuft' : clockTime(e.end!, seconds: true)}). Bitte Beginn oder Ende anpassen; laufende Einträge lassen sich direkt anklicken.';
+      }
     }
     return null;
   }
@@ -353,6 +417,9 @@ class Tracker extends ChangeNotifier {
       data.copy(
         entries: [...data.entries.where((e) => e.id != entry.id), entry]
           ..sort((a, b) => a.start.compareTo(b.start)),
+        lastProject: data.active?.id == entry.id && entry.projectId != null
+            ? entry.projectId
+            : data.lastProject,
       ),
     );
   }

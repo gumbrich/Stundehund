@@ -28,6 +28,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Windows compilation failed.' }
 
     $bundle = Join-Path $projectRoot 'build\windows\x64\runner\Release'
+    $binary = Join-Path $bundle 'stundehund.exe'
+    if ([System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes($binary)).Contains('simulatePowerEvent')) {
+        throw 'The release executable must not contain the debug power-event injection endpoint.'
+    }
     $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
     if (-not (Test-Path $vswhere)) { throw 'Visual Studio Installer (vswhere.exe) was not found.' }
     $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath

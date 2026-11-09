@@ -335,6 +335,9 @@ class TrackerData {
 DateTime dayStart(DateTime d) => DateTime(d.year, d.month, d.day);
 String two(int n) => n.toString().padLeft(2, '0');
 String isoDay(DateTime d) => '${d.year}-${two(d.month)}-${two(d.day)}';
+String swissDay(DateTime d) => '${two(d.day)}.${two(d.month)}.${d.year}';
+String displayDay(DateTime d) =>
+    '${const ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][d.weekday - 1]}, ${swissDay(d)}';
 String clockTime(DateTime d, {bool seconds = false}) =>
     '${two(d.hour)}:${two(d.minute)}${seconds ? ':${two(d.second)}' : ''}';
 String elapsed(Duration d, {bool seconds = false}) =>
